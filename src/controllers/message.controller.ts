@@ -295,10 +295,10 @@ export let  getMessages = async(req:any , res:any, next:any)=>{
 
             }
             else{
-                for(let i=0 ; i < response.results.length; i++){
-                    let message : any = response.results[0];
+                for(const mess  of response.results){
+                    const message : any = mess;
                     if(message.actor.id !== userId){
-                        unreadCount++
+                        unreadCount++;
                     }
                     else{
                         break;
