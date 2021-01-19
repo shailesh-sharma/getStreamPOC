@@ -241,7 +241,7 @@ const updateResponsseWithReadFlag=(conversationslist : any , userUnreadConversat
 
 const getUniqueConversationFromFeed = async (feed : any , uniqueConversationMap : any , next : string)=>{
     let results = [] as any;
-    const response = await feed.get({enrich: true , limit : 10 , id_gt :  next })
+    const response = await feed.get({enrich: true , limit : 10 , id_lt :  next })
 
     response.results.forEach((conversation : any)=>{
         if(!uniqueConversationMap[conversation.object]){
