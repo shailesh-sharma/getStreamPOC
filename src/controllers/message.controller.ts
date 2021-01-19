@@ -309,8 +309,7 @@ const getUniqueConversationFromFeed = async (feed : any , uniqueConversationMap 
 
 export let  getMessages = async(req:any , res:any, next:any)=>{
     try{
-        const {conversationId} = req.params;
-        const classId = req.query.classId as string;
+        const {conversationId , classId} = req.params;
         const userId = req.query.userId as string;
         const nextCursor = req.query.next as string;
         const client = getStramClient();
