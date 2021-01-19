@@ -270,7 +270,7 @@ export let  getMessages = async(req:any , res:any, next:any)=>{
         const nextCursor = req.query.next as string;
         const client = getStramClient();
         const conversationFeed = client.feed("conversations" , conversationId );
-        const response = await conversationFeed.get({limit : 10 , id_gt : nextCursor , enrich : true });
+        const response = await conversationFeed.get({limit : 25 , id_gt : nextCursor , enrich : true });
 
         const lastMessage : any = response.results[0];
 
@@ -295,7 +295,15 @@ export let  getMessages = async(req:any , res:any, next:any)=>{
 
             }
             else{
-                unreadCount = response.results.length;
+                for(let i=0 ; i < response.results.length; i++){
+                    let message : any = response.results[0];
+                    if(message.actor.id !== userId){
+                        unreadCount++
+                    }
+                    else{
+                        break;
+                    }
+                }
             }
             const unreadActivities = unreadFeedResponse.results.find((activity:any)=>activity.object === conversationId && activity.isRead === false );
             if(unreadActivities){
