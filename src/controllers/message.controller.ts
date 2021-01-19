@@ -232,6 +232,8 @@ const updateResponsseWithReadFlag=(conversationslist : any , userUnreadConversat
             const activity = userUnreadConversations.find((unreadConversation : any) => unreadConversation.object === conversation.object);
             if(activity){
                 conversation.isRead = activity.isRead;
+            }else{
+                conversation.isRead = true;
             }
         });
 }
@@ -261,52 +263,6 @@ const getUniqueConversationFromFeed = async (feed : any , uniqueConversationMap 
 
 
 
-// export let addActivity = async(req:any , res:any, next:any)=>{
-//     try{
-//         const {userId1 , userId2 , title } = req.body;
-//         const client = getStramClient();
-
-//         const feedId = `${userId1}_${Date.now()}`;
-//         const annaouncmentFeed = client.feed('user_conversation_list', feedId);
-
-//         // add new post in announcment
-//         const newPostObj = {
-//             actor: userId1,
-//             verb: 'thread' ,
-//             object : title,
-//         };
-
-//         const postResponse = await annaouncmentFeed.addActivity(newPostObj);
-
-//     }catch(err){
-//         res.json(err);
-//     }
-// }
-
-
-// export let deleteConversation =  async(req:any , res:any, next:any)=>{
-//     try{
-//         const {conversationId , classId} = req.params;
-
-//         const userId = req.query.userId as string;
-
-//         const client = getStramClient();
-
-
-//         const userConversationListId = `${classId}_${userId}`;
-
-//         const userFeed = client.feed("user_conversation_list" , userConversationListId );
-
-//         const response  =  await userFeed.removeActivity(conversationId);
-
-
-//         res.json(response);
-//     }catch(err){
-//         res.json(res);
-//     }
-// }
-
-
 export let  getMessages = async(req:any , res:any, next:any)=>{
     try{
         const {conversationId , classId} = req.params;
@@ -316,7 +272,7 @@ export let  getMessages = async(req:any , res:any, next:any)=>{
         const conversationFeed = client.feed("conversations" , conversationId );
         const response = await conversationFeed.get({limit : 10 , id_gt : nextCursor , enrich : true });
 
-        const lastMessage : any = response.results[response.results.length - 1];
+        const lastMessage : any = response.results[0];
 
         const conversationInfo : any  = await client.collections.get("conversationInfo" , conversationId);
 
@@ -414,7 +370,7 @@ export let postMessage = async(req:any , res:any, next:any)=>{
         else{
             receiverId = userId1;
         }
-        const receiverFeedId = `${classId}_${userId2}`;
+        const receiverFeedId = `${classId}_${receiverId}`;
         const unreadConversationFeed = client.feed("unread_Conversations" , receiverFeedId)
         const unreadfeedObj = {
             actor : authorInfo,
