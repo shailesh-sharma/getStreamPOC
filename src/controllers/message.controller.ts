@@ -439,11 +439,10 @@ const getStramClient = ()=>{
 const getStreamClientChat = async (userId? : any)=>{
     const client = new StreamChat( getStreamKey, getStreamSecret , {});
 
-    if(userId){
-        const token = client.createToken(userId);
-        await client.connectUser({id: userId},token)
-    }
-
+    // if(userId){
+    //     const token = client.createToken(userId);
+    //     res = await client.connectUser({id: userId},token)
+    // }
 
     return client;
 }
@@ -481,7 +480,7 @@ export let getMessageList2 = async(req:any , res:any, next:any)=>{
 
         result.next = lastMessage.id;
 
-        await channel.markRead();
+        await channel.markRead({ user_id: userId });
 
         client.disconnect();
         res.json(result)
@@ -497,7 +496,8 @@ export let getThreadList2 = async(req:any , res:any, next:any)=>{
         const {classId} = req.params;
         const userId = req.query.userId as string;
         const userName = req.query.userNama as string;
-
+        const nextcursor  = req.query.next as string;
+        const limit = req.query.limit as string;
         const client = await getStreamClientChat(userId);
 
         const filter = { type: 'messaging', members: { $in: [userId] } , space : classId };
@@ -506,9 +506,11 @@ export let getThreadList2 = async(req:any , res:any, next:any)=>{
         const channels = await client.queryChannels(filter, sort, {
             watch: false, // true is the default
             state: true,
+            limit : Number(limit),
+            offset : Number(nextcursor)
         });
 
-        const result = channels.map(channel=>{
+        const result = channels.map((channel : any)=>{
 
             const lastMessageState = channel.state.messages[channel.state.messages.length - 1];
             const responseObj : any = { lastMessage: {}};
@@ -518,7 +520,7 @@ export let getThreadList2 = async(req:any , res:any, next:any)=>{
             responseObj.lastMessage.senderId = lastMessageState.user.id;
             responseObj.lastMessage.time = channel.data.last_message_at;
             responseObj.created_at = channel.data.created_at;
-            responseObj.unreadCount = channel.state.unreadCount;
+            responseObj.unreadCount = channel.state.read[userId].unread_messages;
             return responseObj;
         })
         client.disconnect();
