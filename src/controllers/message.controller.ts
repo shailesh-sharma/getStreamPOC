@@ -1,23 +1,28 @@
 /* eslint @typescript-eslint/no-var-requires: "off" */
 import PubNub = require("pubnub");
 import stream = require('getstream');
+import { StreamChat } from 'stream-chat';
+
+
+const getStreamKey = process.env.get_stream_key;
+const getStreamSecret = process.env.get_stream_secret;
+const getStreamAppId = process.env.get_stream_appid;
 
 export let getMessageList = async (req : any , res :any, next : any)=>{
     res.send("asdasd")
 }
 
 
-export let getThreadList2 = async (req : any , res :any, next : any)=>{
+export let getThreadList3 = async (req : any , res :any, next : any)=>{
     try{
         const userId   = req.query.userId as string;
         const {classId} = req.params;
 
         const pubnub = new PubNub({
-            subscribeKey: "sub-c-c5bcda02-50db-11eb-ae10-b69578166507",
-            publishKey: "pub-c-550974bc-1374-4d31-8cdb-6d4018014452",
+            subscribeKey: process.env.pub_key,
+            publishKey: process.env.sub_key,
             uuid: userId,
             })
-
         const filterExpression = `channel.id LIKE "${classId}*"`;
         const response = await pubnub.objects.getMemberships({
             uuid: userId,
@@ -41,7 +46,7 @@ export let getThreadList2 = async (req : any , res :any, next : any)=>{
 
 export let getAnnouncement = async (req : any , res :any, next : any)=>{
     try{
-        const client = stream.connect( "uzcx59d8mwym", "4ug936j3552xcrcqcvtexg8bvysk6g3spb3tyz8xmkvv7u39puu5mr5eq563ka2h" , "105987");
+        const client = getStramClient();
         const {classId} = req.params;
 
         const feedId = `annaouncement_${classId}`
@@ -57,7 +62,7 @@ export let getAnnouncement = async (req : any , res :any, next : any)=>{
 
 export let addAnnouncement = async (req : any , res :any, next : any)=>{
     try{
-        const client = stream.connect( "uzcx59d8mwym", "4ug936j3552xcrcqcvtexg8bvysk6g3spb3tyz8xmkvv7u39puu5mr5eq563ka2h" , "105987");
+        const client = getStramClient();
         const { userId1 , message , authorFirstName , authorLastName } = req.body;
         const {classId} = req.params;
 
@@ -89,7 +94,7 @@ export let addAnnouncement = async (req : any , res :any, next : any)=>{
 
 export let getdiscussions = async (req : any , res :any, next : any)=>{
     try{
-        const client = stream.connect( "uzcx59d8mwym", "4ug936j3552xcrcqcvtexg8bvysk6g3spb3tyz8xmkvv7u39puu5mr5eq563ka2h" , "105987");
+        const client = getStramClient();
         const {classId , groupId , itemId} = req.params;
 
         const feedId = `${classId}_${groupId}_${itemId}`
@@ -105,7 +110,7 @@ export let getdiscussions = async (req : any , res :any, next : any)=>{
 
 export let adddiscussions = async (req : any , res :any, next : any)=>{
     try{
-        const client = stream.connect( "uzcx59d8mwym", "4ug936j3552xcrcqcvtexg8bvysk6g3spb3tyz8xmkvv7u39puu5mr5eq563ka2h" , "105987");
+        const client = getStramClient();
 
         const { userId1 , message , authorFirstName , authorLastName } = req.body;
         const {classId , groupId , itemId} = req.params;
@@ -198,6 +203,11 @@ export let createThread = async(req:any , res:any, next:any)=>{
         res.json(err);
     }
 }
+
+
+
+
+
 
 
 
@@ -399,6 +409,7 @@ export let postMessage = async(req:any , res:any, next:any)=>{
 
 
 
+
 export let registerUser = async(req:any , res:any, next:any)=>{
     try{
         const {userId , name } = req.body;
@@ -416,7 +427,157 @@ export let registerUser = async(req:any , res:any, next:any)=>{
 }
 
 
+
 const getStramClient = ()=>{
-    const client = stream.connect( "uzcx59d8mwym", "4ug936j3552xcrcqcvtexg8bvysk6g3spb3tyz8xmkvv7u39puu5mr5eq563ka2h" , "105987");
+    const client = stream.connect( getStreamKey, getStreamSecret , getStreamAppId);
+
+
+
     return client;
 }
+
+const getStreamClientChat = async (userId? : any)=>{
+    const client = new StreamChat( getStreamKey, getStreamSecret , {});
+
+    if(userId){
+        const token = client.createToken(userId);
+        await client.connectUser({id: userId},token)
+    }
+
+
+    return client;
+}
+
+
+
+export let createStreamChatUser = async (req : any , res : any , next : any)=>{
+    try{
+        const {userId , userName} = req.body
+        const client = await getStreamClientChat();
+        const response = await client.upsertUser({id : userId , name : userName});
+
+        res.json(response);
+    }catch(err){
+        res.json(err);
+    }
+}
+
+
+export let getMessageList2 = async(req:any , res:any, next:any)=>{
+    try{
+        const {conversationId} = req.params;
+        const userId = req.query.userId as string;
+        const client = await  getStreamClientChat(userId);
+
+        const channel = client.channel('messaging', conversationId);
+
+
+        const result = await channel.query({
+            messages: { limit: 20, } ,
+            members: { limit: 20, offset: 0 } ,
+            watchers: { limit: 20, offset: 0 },
+        });
+
+        await channel.markRead();
+
+        client.disconnect();
+        res.json(result)
+
+    }catch(err){
+        res.json(err);
+    }
+}
+
+
+export let getThreadList2 = async(req:any , res:any, next:any)=>{
+    try{
+        const {classId} = req.params;
+        const userId = req.query.userId as string;
+        const userName = req.query.userNama as string;
+
+        const client = await getStreamClientChat(userId);
+
+        const filter = { type: 'messaging', members: { $in: [userId] } , space : classId };
+        const sort : any = { last_message_at: -1 };
+
+        const channels = await client.queryChannels(filter, sort, {
+            watch: false, // true is the default
+            state: true,
+        });
+
+        const result = channels.map(channel=>{
+
+            const lastMessageState = channel.state.messages[channel.state.messages.length - 1];
+            const responseObj : any = { lastMessage: {}};
+            responseObj.title = channel.data.title;
+            responseObj.id =  channel.data.id;
+            responseObj.lastMessage.message = lastMessageState.text;
+            responseObj.lastMessage.senderId = lastMessageState.user.id;
+            responseObj.lastMessage.time = channel.data.last_message_at;
+            responseObj.created_at = channel.data.created_at;
+            responseObj.unreadCount = channel.state.unreadCount;
+            return responseObj;
+        })
+        client.disconnect();
+        res.json(result);
+    }catch(err){
+        res.json(err)
+    }
+
+    }
+
+
+export let createThread2 = async(req:any , res:any, next:any)=>{
+    try{
+        const {userId1 , userId2 , message , title , authorFirstName , authorLastName } = req.body;
+        const {classId} = req.params;
+        const client = await getStreamClientChat();
+        const channelId = `${userId1}_${userId2}_${Date.now()}`;
+
+
+        const channel = client.channel('messaging', channelId, {
+            created_by: {id  : userId1  , name :authorFirstName },
+            members : [userId1 , userId2 ],
+            title,
+            space : classId
+        });
+
+        const channelResponse = await channel.create();
+
+        const mess = {
+            text : message ,
+            user: {id  : userId1 },
+        }
+
+        const response = await channel.sendMessage(mess);
+        client.disconnect();
+        res.json(response);
+    }catch(err){
+        res.json(err)
+    }
+
+}
+
+
+export let postMessage2 = async(req:any , res:any, next:any)=>{
+    try{
+        const {conversationId} = req.params;
+        const {senderId , message } = req.body;
+
+        const client = await getStreamClientChat();
+
+        const channel = client.channel('messaging' , conversationId);
+
+        const mess = {
+            text : message,
+            user : {id : senderId}
+        }
+        const response = await channel.sendMessage(mess);
+        client.disconnect();
+        res.json(response);
+
+    }catch(err){
+        res.json(err);
+    }
+}
+

@@ -18,3 +18,4 @@
 !.vscode/extensions.json
 temp/
 dist/
+.env

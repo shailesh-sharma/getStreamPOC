@@ -1,5 +1,9 @@
 import express from "express";
 import * as bodyParser from 'body-parser';
+
+import * as dotenv from 'dotenv';
+dotenv.config()
+
 const app = express();
 const port =  process.env.PORT || 8080; // default port to listen
 

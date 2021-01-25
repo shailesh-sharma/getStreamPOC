@@ -21,15 +21,15 @@ export default function () {
 
     // conversation
 
-    router.get("/classes/:classId/conversation" , messageController.getThreadList);
-    router.post("/classes/:classId/conversation" , messageController.createThread);
+    router.get("/classes/:classId/conversation" , messageController.getThreadList2);
+    router.post("/classes/:classId/conversation" , messageController.createThread2);
     // router.delete("/classes/:classId/conversation/:conversationId" , messageController.deleteConversation);
 
-    router.get("/classes/:classId/conversation/:conversationId" , messageController.getMessages);
-    router.post("/classes/:classId/conversation/:conversationId" , messageController.postMessage)
+    router.get("/classes/:classId/conversation/:conversationId" , messageController.getMessageList2);
+    router.post("/classes/:classId/conversation/:conversationId" , messageController.postMessage2);
 
 
-    router.post("/register/user" , messageController.registerUser)
+    router.post("/register/user" , messageController.createStreamChatUser);
 
     return router;
   };
