@@ -467,16 +467,19 @@ export let getMessageList2 = async(req:any , res:any, next:any)=>{
     try{
         const {conversationId} = req.params;
         const userId = req.query.userId as string;
+        const nextCursor = req.query.next as string;
         const client = await  getStreamClientChat(userId);
 
         const channel = client.channel('messaging', conversationId);
 
 
-        const result = await channel.query({
-            messages: { limit: 20, } ,
-            members: { limit: 20, offset: 0 } ,
-            watchers: { limit: 20, offset: 0 },
+        const result :any = await channel.query({
+            messages: { limit: 5, id_lt: nextCursor }
         });
+
+        const lastMessage = result.messages[0];
+
+        result.next = lastMessage.id;
 
         await channel.markRead();
 
@@ -575,6 +578,18 @@ export let postMessage2 = async(req:any , res:any, next:any)=>{
         const response = await channel.sendMessage(mess);
         client.disconnect();
         res.json(response);
+
+    }catch(err){
+        res.json(err);
+    }
+}
+
+
+export let markAllRead = async( req:any , res:any, next:any)=>{
+    try{
+        const {classId} = req.params;
+        const userId = req.query.userId as string;
+        const client = getStreamClientChat(userId);
 
     }catch(err){
         res.json(err);

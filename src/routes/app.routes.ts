@@ -31,5 +31,8 @@ export default function () {
 
     router.post("/register/user" , messageController.createStreamChatUser);
 
+
+    router.get("/classes/:classId/conversation/mark-all-read" , messageController.markAllRead);
+
     return router;
   };
