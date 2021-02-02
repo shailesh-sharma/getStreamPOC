@@ -2,7 +2,7 @@
 import PubNub = require("pubnub");
 import stream = require('getstream');
 import { StreamChat } from 'stream-chat';
-
+// import { Chat, Channel, ChannelHeader, Thread, Window } from 'stream-chat-react';
 
 const getStreamKey = process.env.get_stream_key;
 const getStreamSecret = process.env.get_stream_secret;
@@ -49,10 +49,13 @@ export let getAnnouncement = async (req : any , res :any, next : any)=>{
         const client = getStramClient();
         const {classId} = req.params;
 
-        const feedId = `annaouncement_${classId}`
-        const annaouncmentFeed = client.feed('annaouncement_temp', feedId)
+        const userId = req.query.userId as string;
 
-        const post = await annaouncmentFeed.get({enrich: true , limit : 100 });
+        const userFeed = client.feed('new_notification', userId);
+
+        await userFeed.follow('new_announcemnt', classId );
+
+        const post = await userFeed.get({enrich: true , limit : 100 });
         res.json(post)
     }catch(err){
         res.json(err)
@@ -71,16 +74,16 @@ export let addAnnouncement = async (req : any , res :any, next : any)=>{
             lastName : authorLastName
           });
 
-        const feedId = `annaouncement_${classId}`
-        const annaouncmentFeed = client.feed('annaouncement_temp', feedId)
+        const feedId = `${classId}`
+        const annaouncmentFeed = client.feed('new_announcement', feedId)
 
 
         // add new post in announcment
         const newPostObj = {
             actor: authorInfo,
-            verb: 'thread' ,
+            verb: 'announcement' ,
             object : message,
-
+            classId,
         };
 
         const postResponse = await annaouncmentFeed.addActivity(newPostObj);
@@ -436,7 +439,7 @@ const getStramClient = ()=>{
     return client;
 }
 
-const getStreamClientChat = async (userId? : any)=>{
+const getStreamChatClient = async (userId? : any)=>{
     const client = new StreamChat( getStreamKey, getStreamSecret , {});
 
     // if(userId){
@@ -452,7 +455,7 @@ const getStreamClientChat = async (userId? : any)=>{
 export let createStreamChatUser = async (req : any , res : any , next : any)=>{
     try{
         const {userId , userName} = req.body
-        const client = await getStreamClientChat();
+        const client = await getStreamChatClient();
         const response = await client.upsertUser({id : userId , name : userName});
 
         res.json(response);
@@ -462,81 +465,11 @@ export let createStreamChatUser = async (req : any , res : any , next : any)=>{
 }
 
 
-export let getMessageList2 = async(req:any , res:any, next:any)=>{
-    try{
-        const {conversationId} = req.params;
-        const userId = req.query.userId as string;
-        const nextCursor = req.query.next as string;
-        const client = await  getStreamClientChat(userId);
-
-        const channel = client.channel('messaging', conversationId);
-
-
-        const result :any = await channel.query({
-            messages: { limit: 5, id_lt: nextCursor }
-        });
-
-        const lastMessage = result.messages[0];
-
-        result.next = lastMessage.id;
-
-        await channel.markRead({ user_id: userId });
-
-        client.disconnect();
-        res.json(result)
-
-    }catch(err){
-        res.json(err);
-    }
-}
-
-
-export let getThreadList2 = async(req:any , res:any, next:any)=>{
-    try{
-        const {classId} = req.params;
-        const userId = req.query.userId as string;
-        const userName = req.query.userNama as string;
-        const nextcursor  = req.query.next as string;
-        const limit = req.query.limit as string;
-        const client = await getStreamClientChat(userId);
-
-        const filter = { type: 'messaging', members: { $in: [userId] } , space : classId };
-        const sort : any = { last_message_at: -1 };
-
-        const channels = await client.queryChannels(filter, sort, {
-            watch: false, // true is the default
-            state: true,
-            limit : Number(limit),
-            offset : Number(nextcursor)
-        });
-
-        const result = channels.map((channel : any)=>{
-
-            const lastMessageState = channel.state.messages[channel.state.messages.length - 1];
-            const responseObj : any = { lastMessage: {}};
-            responseObj.title = channel.data.title;
-            responseObj.id =  channel.data.id;
-            responseObj.lastMessage.message = lastMessageState.text;
-            responseObj.lastMessage.senderId = lastMessageState.user.id;
-            responseObj.lastMessage.time = channel.data.last_message_at;
-            responseObj.created_at = channel.data.created_at;
-            responseObj.unreadCount = channel.state.read[userId].unread_messages;
-            return responseObj;
-        })
-        client.disconnect();
-        res.json(result);
-    }catch(err){
-        res.json(err)
-    }
-
-    }
-
-
 export let createThread2 = async(req:any , res:any, next:any)=>{
     try{
         const {userId1 , userId2 , message , title , authorFirstName , authorLastName } = req.body;
         const {classId} = req.params;
-        const client = await getStreamClientChat();
+        const client = await getStreamChatClient();
         const channelId = `${userId1}_${userId2}_${Date.now()}`;
 
 
@@ -564,12 +497,85 @@ export let createThread2 = async(req:any , res:any, next:any)=>{
 }
 
 
+export let getThreadList2 = async(req:any , res:any, next:any)=>{
+    try{
+        const {classId} = req.params;
+        const userId = req.query.userId as string;
+        const userName = req.query.userNama as string;
+        const nextcursor  = req.query.next as string;
+        const messageLimit = req.query.messLimit as string;
+        const limit = req.query.limit as string;
+        const client = await getStreamChatClient(userId);
+
+        const filter = { type: 'messaging', members: { $in: [userId] } , space : classId };
+        const sort : any = { last_message_at: -1 };
+
+        const channels = await client.queryChannels(filter, sort, {
+            watch: false, // true is the default
+            state: true,
+            limit : Number(limit),
+            offset : Number(nextcursor),
+            message_limit : Number(messageLimit)
+        });
+
+        const result = channels.map((channel : any)=>{
+
+            const lastMessageState = channel.state.messages[channel.state.messages.length - 1];
+            const responseObj : any = { lastMessage: {}};
+            responseObj.title = channel.data.title;
+            responseObj.id =  channel.data.id;
+            responseObj.lastMessage.message = lastMessageState.text;
+            responseObj.lastMessage.senderId = lastMessageState.user.id;
+            responseObj.lastMessage.time = channel.data.last_message_at;
+            responseObj.created_at = channel.data.created_at;
+            responseObj.unreadCount = channel.state.read[userId].unread_messages;
+            return responseObj;
+        })
+        client.disconnect();
+        res.json(result);
+    }catch(err){
+        res.json(err)
+    }
+
+}
+
+
+export let getMessageList2 = async(req:any , res:any, next:any)=>{
+    try{
+        const {conversationId} = req.params;
+        const userId = req.query.userId as string;
+        const nextCursor = req.query.next as string;
+        const client = await  getStreamChatClient(userId);
+
+        const channel = client.channel('messaging', conversationId);
+
+
+        const result :any = await channel.query({
+            messages: { limit: 5, id_lt: nextCursor }
+        });
+
+        const lastMessage = result.messages[0];
+
+        const countUnread = channel.countUnread();
+
+        result.next = lastMessage.id;
+
+        await channel.markRead({ user_id: userId });
+
+        client.disconnect();
+        res.json(result)
+
+    }catch(err){
+        res.json(err);
+    }
+}
+
 export let postMessage2 = async(req:any , res:any, next:any)=>{
     try{
         const {conversationId} = req.params;
         const {senderId , message } = req.body;
 
-        const client = await getStreamClientChat();
+        const client = await getStreamChatClient();
 
         const channel = client.channel('messaging' , conversationId);
 
@@ -587,14 +593,18 @@ export let postMessage2 = async(req:any , res:any, next:any)=>{
 }
 
 
-export let markAllRead = async( req:any , res:any, next:any)=>{
+
+export let markAllRead = async(req:any , res:any, next:any)=>{
     try{
-        const {classId} = req.params;
-        const userId = req.query.userId as string;
-        const client = getStreamClientChat(userId);
+        const client =  await getStreamChatClient();
+        const type = req.query.type as string;
+        const channelType = await client.getChannelType(type);
+        res.json(channelType)
 
     }catch(err){
-        res.json(err);
+        res.json(err)
     }
+
 }
+
 

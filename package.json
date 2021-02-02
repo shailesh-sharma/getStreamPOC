@@ -18,7 +18,8 @@
     "express": "^4.17.1",
     "getstream": "^7.1.1",
     "pubnub": "^4.29.11",
-    "stream-chat": "^2.11.5"
+    "stream-chat": "^2.11.5",
+    "stream-chat-react": "^3.5.3"
   },
   "devDependencies": {
     "@types/express": "^4.17.11",

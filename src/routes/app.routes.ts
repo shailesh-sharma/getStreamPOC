@@ -25,6 +25,7 @@ export default function () {
     router.post("/classes/:classId/conversation" , messageController.createThread2);
     // router.delete("/classes/:classId/conversation/:conversationId" , messageController.deleteConversation);
 
+    router.get("/classes/:classId/conversation/mark-all-read" , messageController.markAllRead);
     router.get("/classes/:classId/conversation/:conversationId" , messageController.getMessageList2);
     router.post("/classes/:classId/conversation/:conversationId" , messageController.postMessage2);
 
@@ -32,7 +33,7 @@ export default function () {
     router.post("/register/user" , messageController.createStreamChatUser);
 
 
-    router.get("/classes/:classId/conversation/mark-all-read" , messageController.markAllRead);
+
 
     return router;
   };
